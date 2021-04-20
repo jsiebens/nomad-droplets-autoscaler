@@ -208,8 +208,8 @@ func (t *TargetPlugin) createDropletTemplate(config map[string]string) (*droplet
 		return nil, fmt.Errorf("invalid value for config param %s", configKeySnapshotID)
 	}
 
-	sshKeyFingerprint, _ := t.getValue(config, configKeySshKeys)
-	tags, _ := t.getValue(config, configKeyTags)
+	sshKeyFingerprintAsString, _ := t.getValue(config, configKeySshKeys)
+	tagsAsString, _ := t.getValue(config, configKeyTags)
 	userData, _ := t.getValue(config, configKeyUserData)
 
 	// We cannot scale droplets without knowing the target node class.
@@ -218,15 +218,25 @@ func (t *TargetPlugin) createDropletTemplate(config map[string]string) (*droplet
 		return nil, fmt.Errorf("required config param %s not found", sdk.TargetConfigKeyClass)
 	}
 
+	var tags = []string{nodeClass}
+	if len(tagsAsString) != 0 {
+		tags = append(tags, strings.Split(tagsAsString, ",")...)
+	}
+
+	var sshKeyFingerprints = []string{}
+	if len(sshKeyFingerprintAsString) != 0 {
+		sshKeyFingerprints = append(sshKeyFingerprints, strings.Split(sshKeyFingerprintAsString, ",")...)
+	}
+
 	return &dropletTemplate{
 		region:     region,
 		size:       size,
 		vpc:        vpc,
 		snapshotID: int(snapshotID),
 		nodeClass:  nodeClass,
-		sshKeys:    strings.Split(sshKeyFingerprint, ","),
+		sshKeys:    sshKeyFingerprints,
 		userData:   userData,
-		tags:       strings.Split(tags, ","),
+		tags:       tags,
 	}, nil
 }
 

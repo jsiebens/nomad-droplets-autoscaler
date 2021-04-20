@@ -41,7 +41,7 @@ func (t *TargetPlugin) scaleOut(ctx context.Context, num int64, template *drople
 			Image: godo.DropletCreateImage{
 				ID: template.snapshotID,
 			},
-			Tags: append(template.tags, template.nodeClass),
+			Tags: template.tags,
 		}
 
 		if len(template.sshKeys) != 0 {
