@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"time"
 
 	"github.com/digitalocean/godo"
@@ -27,12 +28,12 @@ type dropletTemplate struct {
 	userData   string
 }
 
-func (t *TargetPlugin) scaleOut(ctx context.Context, num int64, template *dropletTemplate, config map[string]string) error {
-	log := t.logger.With("action", "scale_out", "tag", template.nodeClass, "count", num)
+func (t *TargetPlugin) scaleOut(ctx context.Context, desired, diff int64, template *dropletTemplate, config map[string]string) error {
+	log := t.logger.With("action", "scale_out", "tag", template.nodeClass, "count", diff)
 
 	log.Debug("creating DigitalOcean droplets")
 
-	for i := int64(0); i < num; i++ {
+	for i := int64(0); i < diff; i++ {
 		createRequest := &godo.DropletCreateRequest{
 			Name:    template.nodeClass + "-" + randstr.String(6),
 			Region:  template.region,
@@ -65,7 +66,7 @@ func (t *TargetPlugin) scaleOut(ctx context.Context, num int64, template *drople
 
 	log.Debug("successfully created DigitalOcean droplets")
 
-	if err := t.ensureDropletsAreStable(ctx, template); err != nil {
+	if err := t.ensureDropletsAreStable(ctx, template, desired); err != nil {
 		return fmt.Errorf("failed to confirm scale out DigitalOcean droplets: %v", err)
 	}
 
@@ -74,9 +75,9 @@ func (t *TargetPlugin) scaleOut(ctx context.Context, num int64, template *drople
 	return nil
 }
 
-func (t *TargetPlugin) scaleIn(ctx context.Context, num int64, template *dropletTemplate, config map[string]string) error {
+func (t *TargetPlugin) scaleIn(ctx context.Context, desired, diff int64, template *dropletTemplate, config map[string]string) error {
 
-	ids, err := t.clusterUtils.RunPreScaleInTasks(ctx, config, int(num))
+	ids, err := t.clusterUtils.RunPreScaleInTasks(ctx, config, int(diff))
 	if err != nil {
 		return fmt.Errorf("failed to perform pre-scale Nomad scale in tasks: %v", err)
 	}
@@ -98,9 +99,9 @@ func (t *TargetPlugin) scaleIn(ctx context.Context, num int64, template *droplet
 		return fmt.Errorf("failed to delete instances: %v", err)
 	}
 
-	log.Debug("successfully deleted DigitalOcean droplets")
+	log.Debug("successfully started deletion process")
 
-	if err := t.ensureDropletsAreStable(ctx, template); err != nil {
+	if err := t.ensureDropletsAreStable(ctx, template, desired); err != nil {
 		return fmt.Errorf("failed to confirm scale in DigitalOcean droplets: %v", err)
 	}
 
@@ -114,11 +115,11 @@ func (t *TargetPlugin) scaleIn(ctx context.Context, num int64, template *droplet
 	return nil
 }
 
-func (t *TargetPlugin) ensureDropletsAreStable(ctx context.Context, template *dropletTemplate) error {
+func (t *TargetPlugin) ensureDropletsAreStable(ctx context.Context, template *dropletTemplate, desired int64) error {
 
 	f := func(ctx context.Context) (bool, error) {
-		total, active, err := t.countDroplets(ctx, template)
-		if total == active || err != nil {
+		_, active, err := t.countDroplets(ctx, template)
+		if desired == active || err != nil {
 			return true, err
 		} else {
 			return false, fmt.Errorf("waiting for droplets to become stable")
@@ -130,6 +131,7 @@ func (t *TargetPlugin) ensureDropletsAreStable(ctx context.Context, template *dr
 
 func (t *TargetPlugin) deleteDroplets(ctx context.Context, tag string, instanceIDs map[string]bool) error {
 	// create options. initially, these will be blank
+	var dropletsToDelete []int
 	opt := &godo.ListOptions{}
 	for {
 		droplets, resp, err := t.client.Droplets.ListByTag(ctx, tag, opt)
@@ -140,15 +142,19 @@ func (t *TargetPlugin) deleteDroplets(ctx context.Context, tag string, instanceI
 		for _, d := range droplets {
 			_, ok := instanceIDs[d.Name]
 			if ok {
-				_, err := t.client.Droplets.Delete(ctx, d.ID)
-				if err != nil {
-					return err
-				}
+				go func(dropletId int) {
+					log := t.logger.With("action", "delete", "droplet_id", strconv.Itoa(dropletId))
+					err := shutdownDroplet(dropletId, t.client, log)
+					if err != nil {
+						log.Error("error deleting droplet", err)
+					}
+				}(d.ID)
+				dropletsToDelete = append(dropletsToDelete, d.ID)
 			}
 		}
 
-		// if we are at the last page, break out the for loop
-		if resp.Links == nil || resp.Links.IsLastPage() {
+		// if we deleted all droplets or if we are at the last page, break out the for loop
+		if len(dropletsToDelete) == len(instanceIDs) || resp.Links == nil || resp.Links.IsLastPage() {
 			break
 		}
 

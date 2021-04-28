@@ -123,13 +123,13 @@ func (t *TargetPlugin) Scale(action sdk.ScalingAction, config map[string]string)
 		return fmt.Errorf("failed to describe DigitalOcedroplets: %v", err)
 	}
 
-	num, direction := t.calculateDirection(total, action.Count)
+	diff, direction := t.calculateDirection(total, action.Count)
 
 	switch direction {
 	case "in":
-		err = t.scaleIn(ctx, num, template, config)
+		err = t.scaleIn(ctx, action.Count, diff, template, config)
 	case "out":
-		err = t.scaleOut(ctx, num, template, config)
+		err = t.scaleOut(ctx, action.Count, diff, template, config)
 	default:
 		t.logger.Info("scaling not required", "tag", template.nodeClass,
 			"current_count", total, "strategy_count", action.Count)
