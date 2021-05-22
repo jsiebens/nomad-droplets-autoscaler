@@ -2,6 +2,10 @@ SHELL := bash
 LDFLAGS := "-s -w"
 .PHONY: all
 
+.PHONY: %.zip
+%.zip:
+	touch $@
+
 .PHONY: test
 test:
 	go test ./...
@@ -13,12 +17,9 @@ build:
 .PHONY: dist
 dist:
 	mkdir -p dist
-	GOOS=linux go build -ldflags $(LDFLAGS) -o dist/do-droplets
-	GOOS=darwin go build -ldflags $(LDFLAGS) -o dist/do-droplets-darwin
-	GOOS=linux GOARCH=arm GOARM=6 go build -ldflags $(LDFLAGS) -o dist/do-droplets-armhf
-	GOOS=linux GOARCH=arm64 go build -ldflags $(LDFLAGS) -o dist/do-droplets-arm64
-	GOOS=windows go build -ldflags $(LDFLAGS) -o dist/do-droplets.exe
-
-.PHONY: hash
-hash:
-	for f in dist/do-droplets*; do shasum -a 256 $$f > $$f.sha256; done
+	./scripts/dist.sh linux amd64
+	./scripts/dist.sh linux arm64
+	./scripts/dist.sh linux arm
+	./scripts/dist.sh darwin amd64
+	./scripts/dist.sh windows amd64
+	cd dist && shasum -a 256 *.zip > do-droplets_SHA256SUMS && cd ..

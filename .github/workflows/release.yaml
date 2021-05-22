@@ -16,7 +16,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      - run: make test dist hash
+      - run: make test dist
 
       - uses: skx/github-action-publish-binaries@master
         env:
