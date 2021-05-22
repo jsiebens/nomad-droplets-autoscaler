@@ -12,7 +12,7 @@ test:
 
 .PHONY: build
 build:
-	go build -ldflags $(LDFLAGS)
+	CGO_ENABLED=0 go build -ldflags $(LDFLAGS) -a -installsuffix cgo -o dist/do-droplets
 
 .PHONY: dist
 dist:
