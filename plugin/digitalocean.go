@@ -22,20 +22,20 @@ type dropletTemplate struct {
 	size       string
 	vpc        string
 	snapshotID int
-	nodeClass  string
+	name       string
 	sshKeys    []string
 	tags       []string
 	userData   string
 }
 
 func (t *TargetPlugin) scaleOut(ctx context.Context, desired, diff int64, template *dropletTemplate, config map[string]string) error {
-	log := t.logger.With("action", "scale_out", "tag", template.nodeClass, "count", diff)
+	log := t.logger.With("action", "scale_out", "tag", template.name, "count", diff)
 
 	log.Debug("creating DigitalOcean droplets")
 
 	for i := int64(0); i < diff; i++ {
 		createRequest := &godo.DropletCreateRequest{
-			Name:    template.nodeClass + "-" + randstr.String(6),
+			Name:    template.name + "-" + randstr.String(6),
 			Region:  template.region,
 			Size:    template.size,
 			VPCUUID: template.vpc,
@@ -91,11 +91,11 @@ func (t *TargetPlugin) scaleIn(ctx context.Context, desired, diff int64, templat
 
 	// Create a logger for this action to pre-populate useful information we
 	// would like on all log lines.
-	log := t.logger.With("action", "scale_in", "tag", template.nodeClass, "instances", ids)
+	log := t.logger.With("action", "scale_in", "tag", template.name, "instances", ids)
 
 	log.Debug("deleting DigitalOcean droplets")
 
-	if err := t.deleteDroplets(ctx, template.nodeClass, instanceIDs); err != nil {
+	if err := t.deleteDroplets(ctx, template.name, instanceIDs); err != nil {
 		return fmt.Errorf("failed to delete instances: %v", err)
 	}
 
@@ -176,7 +176,7 @@ func (t *TargetPlugin) countDroplets(ctx context.Context, template *dropletTempl
 
 	opt := &godo.ListOptions{}
 	for {
-		droplets, resp, err := t.client.Droplets.ListByTag(ctx, template.nodeClass, opt)
+		droplets, resp, err := t.client.Droplets.ListByTag(ctx, template.name, opt)
 		if err != nil {
 			return 0, 0, err
 		}

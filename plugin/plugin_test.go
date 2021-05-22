@@ -50,11 +50,11 @@ func TestTargetPlugin_calculateDirection(t *testing.T) {
 
 func TestTargetPlugin_createDropletTemplate(t *testing.T) {
 	input := map[string]string{
-		"region" : "ny1",
-		"size" : "s-1vcpu-1gb",
-		"vpc_uuid" : "b6ac51f4-dc83-11e8-a3da-3cfdfea9f0d8",
-		"snapshot_id" : "123",
-		"node_class" : "hashistack",
+		"region":      "ny1",
+		"size":        "s-1vcpu-1gb",
+		"vpc_uuid":    "b6ac51f4-dc83-11e8-a3da-3cfdfea9f0d8",
+		"snapshot_id": "123",
+		"node_class":  "hashistack",
 	}
 
 	plugin := TargetPlugin{}
@@ -62,17 +62,37 @@ func TestTargetPlugin_createDropletTemplate(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, []string{}, dropletTemplate.sshKeys)
+	assert.Equal(t, "hashistack", dropletTemplate.name)
 	assert.Equal(t, []string{"hashistack"}, dropletTemplate.tags)
+}
+
+func TestTargetPlugin_createDropletTemplateWithCustomName(t *testing.T) {
+	input := map[string]string{
+		"region":      "ny1",
+		"size":        "s-1vcpu-1gb",
+		"vpc_uuid":    "b6ac51f4-dc83-11e8-a3da-3cfdfea9f0d8",
+		"snapshot_id": "123",
+		"node_class":  "batch",
+		"name":        "hashi-batch",
+	}
+
+	plugin := TargetPlugin{}
+	dropletTemplate, err := plugin.createDropletTemplate(input)
+
+	assert.Nil(t, err)
+	assert.Equal(t, []string{}, dropletTemplate.sshKeys)
+	assert.Equal(t, "hashi-batch", dropletTemplate.name)
+	assert.Equal(t, []string{"hashi-batch"}, dropletTemplate.tags)
 }
 
 func TestTargetPlugin_createDropletTemplateWithMultipleTags(t *testing.T) {
 	input := map[string]string{
-		"region" : "ny1",
-		"size" : "s-1vcpu-1gb",
-		"vpc_uuid" : "b6ac51f4-dc83-11e8-a3da-3cfdfea9f0d8",
-		"snapshot_id" : "123",
-		"tags" : "tag1,tag2",
-		"node_class" : "hashistack",
+		"region":      "ny1",
+		"size":        "s-1vcpu-1gb",
+		"vpc_uuid":    "b6ac51f4-dc83-11e8-a3da-3cfdfea9f0d8",
+		"snapshot_id": "123",
+		"tags":        "tag1,tag2",
+		"node_class":  "hashistack",
 	}
 
 	plugin := TargetPlugin{}

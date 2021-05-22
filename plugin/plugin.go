@@ -30,6 +30,7 @@ const (
 	configKeySnapshotID = "snapshot_id"
 	configKeySshKeys    = "ssh_keys"
 	configKeyUserData   = "user_data"
+	configKeyName       = "name"
 	configKeyTags       = "tags"
 )
 
@@ -131,7 +132,7 @@ func (t *TargetPlugin) Scale(action sdk.ScalingAction, config map[string]string)
 	case "out":
 		err = t.scaleOut(ctx, action.Count, diff, template, config)
 	default:
-		t.logger.Info("scaling not required", "tag", template.nodeClass,
+		t.logger.Info("scaling not required", "tag", template.name,
 			"current_count", total, "strategy_count", action.Count)
 		return nil
 	}
@@ -218,7 +219,9 @@ func (t *TargetPlugin) createDropletTemplate(config map[string]string) (*droplet
 		return nil, fmt.Errorf("required config param %s not found", sdk.TargetConfigKeyClass)
 	}
 
-	var tags = []string{nodeClass}
+	name := t.getValueWithFallback(config, configKeyName, nodeClass)
+
+	var tags = []string{name}
 	if len(tagsAsString) != 0 {
 		tags = append(tags, strings.Split(tagsAsString, ",")...)
 	}
@@ -233,7 +236,7 @@ func (t *TargetPlugin) createDropletTemplate(config map[string]string) (*droplet
 		size:       size,
 		vpc:        vpc,
 		snapshotID: int(snapshotID),
-		nodeClass:  nodeClass,
+		name:       name,
 		sshKeys:    sshKeyFingerprints,
 		userData:   userData,
 		tags:       tags,
@@ -262,6 +265,20 @@ func (t *TargetPlugin) getValue(config map[string]string, name string) (string, 
 	}
 
 	return "", false
+}
+
+func (t *TargetPlugin) getValueWithFallback(config map[string]string, name string, fallback string) string {
+	v, ok := config[name]
+	if ok {
+		return v
+	}
+
+	v, ok = t.config[name]
+	if ok {
+		return v
+	}
+
+	return fallback
 }
 
 func pathOrContents(poc string) (string, error) {
