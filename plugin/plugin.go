@@ -182,6 +182,12 @@ func (t *TargetPlugin) Status(config map[string]string) (*sdk.TargetStatus, erro
 func (t *TargetPlugin) createDropletTemplate(config map[string]string) (*dropletTemplate, error) {
 
 	// We cannot scale droplets without knowing the region.
+	name, ok := t.getValue(config, configKeyName)
+	if !ok {
+		return nil, fmt.Errorf("required config param %s not found", configKeyName)
+	}
+
+	// We cannot scale droplets without knowing the region.
 	region, ok := t.getValue(config, configKeyRegion)
 	if !ok {
 		return nil, fmt.Errorf("required config param %s not found", configKeyRegion)
@@ -199,7 +205,7 @@ func (t *TargetPlugin) createDropletTemplate(config map[string]string) (*droplet
 		return nil, fmt.Errorf("required config param %s not found", configKeyVpcUUID)
 	}
 
-	// We cannot scale droplets without knowing the target node class.
+	// We cannot scale droplets without knowing the snapshot id.
 	snapshot, ok := t.getValue(config, configKeySnapshotID)
 	if !ok {
 		return nil, fmt.Errorf("required config param %s not found", configKeySnapshotID)
@@ -212,14 +218,6 @@ func (t *TargetPlugin) createDropletTemplate(config map[string]string) (*droplet
 	sshKeyFingerprintAsString, _ := t.getValue(config, configKeySshKeys)
 	tagsAsString, _ := t.getValue(config, configKeyTags)
 	userData, _ := t.getValue(config, configKeyUserData)
-
-	// We cannot scale droplets without knowing the target node class.
-	nodeClass, ok := config[sdk.TargetConfigKeyClass]
-	if !ok {
-		return nil, fmt.Errorf("required config param %s not found", sdk.TargetConfigKeyClass)
-	}
-
-	name := t.getValueWithFallback(config, configKeyName, nodeClass)
 
 	var tags = []string{name}
 	if len(tagsAsString) != 0 {
@@ -265,20 +263,6 @@ func (t *TargetPlugin) getValue(config map[string]string, name string) (string, 
 	}
 
 	return "", false
-}
-
-func (t *TargetPlugin) getValueWithFallback(config map[string]string, name string, fallback string) string {
-	v, ok := config[name]
-	if ok {
-		return v
-	}
-
-	v, ok = t.config[name]
-	if ok {
-		return v
-	}
-
-	return fallback
 }
 
 func pathOrContents(poc string) (string, error) {
