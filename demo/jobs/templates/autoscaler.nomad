@@ -1,23 +1,17 @@
 job "autoscaler" {
-  datacenters = ["dc1"]
-
-  constraint {
-    attribute = "$${node.class}"
-    value     = "platform"
-  }
+  datacenters = ["platform"]
 
   group "autoscaler" {
-    count = 1
-
     network {
-      port "http" {}
+      port "autoscaler" {}
+      port "promtail" {}
     }
 
     task "autoscaler" {
       driver = "docker"
 
       artifact {
-        source      = "https://github.com/jsiebens/nomad-droplets-autoscaler/releases/download/v0.1.2/do-droplets_linux_amd64.zip"
+        source      = "https://github.com/jsiebens/nomad-droplets-autoscaler/releases/download/v0.2.0/do-droplets_linux_amd64.zip"
         destination = "local/plugins/"
       }
 
@@ -30,14 +24,14 @@ job "autoscaler" {
           "-config", "local/config.hcl",
           "-plugin-dir", "local/plugins/"
         ]
-        ports   = ["http"]
+        ports   = ["autoscaler"]
       }
 
       template {
         data = <<EOF
 http {
   bind_address = "0.0.0.0"
-  bind_port    = {{ env "NOMAD_PORT_http" }}
+  bind_port    = {{ env "NOMAD_PORT_autoscaler" }}
 }
 
 policy {
@@ -45,7 +39,7 @@ policy {
 }
 
 nomad {
-  address = "http://{{ env "attr.unique.network.ip-address" }}:4646"
+  address = "http://{{env "attr.unique.network.ip-address" }}:4646"
 }
 
 apm "prometheus" {
@@ -53,10 +47,6 @@ apm "prometheus" {
   config = {
     address = "http://{{ range service "prometheus" }}{{ .Address }}:{{ .Port }}{{ end }}"
   }
-}
-
-strategy "target-value" {
-  driver = "target-value"
 }
 
 strategy "pass-through" {
@@ -73,15 +63,17 @@ target "do-droplets" {
 }
 EOF
 
-        destination = "local/config.hcl"
+        change_mode   = "signal"
+        change_signal = "SIGHUP"
+        destination   = "local/config.hcl"
       }
 
       template {
         data = <<EOF
 scaling "batch" {
   enabled = true
-  min = 0
-  max = 10
+  min     = 0
+  max     = 5
 
   policy {
     cooldown            = "1m"
@@ -95,43 +87,112 @@ scaling "batch" {
     }
 
     target "do-droplets" {
+      name = "hashi-batch"
       region = "${region}"
       size = "s-1vcpu-1gb"
       snapshot_id = ${snapshot_id}
       user_data = "local/batch-startup.sh"
-      name = "hashi-batch"
-      node_class = "batch"
-      node_drain_deadline = "1h"
+
+      datacenter             = "batch_workers"
+      node_drain_deadline    = "1h"
       node_selector_strategy = "empty_ignore_system"
     }
   }
 }
 EOF
 
-        destination = "local/policies/batch.hcl"
+        change_mode   = "signal"
+        change_signal = "SIGHUP"
+        destination   = "local/policies/batch.hcl"
       }
 
       template {
         destination = "local/batch-startup.sh"
         data = <<EOF
 #!/bin/bash
-/ops/scripts/client.sh "batch" "hashi-server" "${token}"
+/ops/scripts/client.sh "batch_workers" "hashi-server" "${token}"
 EOF
-      }
-
-      resources {
-        cpu    = 50
-        memory = 128
       }
 
       service {
         name = "autoscaler"
-        port = "http"
+        port = "autoscaler"
 
         check {
           type     = "http"
           path     = "/v1/health"
-          interval = "5s"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+
+    task "promtail" {
+      driver = "docker"
+
+      lifecycle {
+        hook    = "prestart"
+        sidecar = true
+      }
+
+      config {
+        image = "grafana/promtail:1.5.0"
+        ports = ["promtail"]
+
+        args = [
+          "-config.file",
+          "local/promtail.yaml",
+        ]
+      }
+
+      template {
+        data = <<EOH
+server:
+  http_listen_port: {{ env "NOMAD_PORT_promtail" }}
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+client:
+  url: http://{{ range $i, $s := service "loki" }}{{ if eq $i 0 }}{{.Address}}:{{.Port}}{{end}}{{end}}/api/prom/push
+
+scrape_configs:
+- job_name: system
+  entry_parser: raw
+  static_configs:
+  - targets:
+      - localhost
+    labels:
+      task: autoscaler
+      __path__: {{ env "NOMAD_ALLOC_DIR" }}/logs/autoscaler*
+  pipeline_stages:
+  - match:
+      selector: '{task="autoscaler"}'
+      stages:
+      - regex:
+          expression: '.*policy_id=(?P<policy_id>[a-zA-Z0-9_-]+).*reason="(?P<reason>.+)"'
+      - labels:
+          policy_id:
+          reason:
+EOH
+
+        destination = "local/promtail.yaml"
+      }
+
+      resources {
+        cpu    = 50
+        memory = 32
+      }
+
+      service {
+        name = "promtail"
+        port = "promtail"
+
+        check {
+          type     = "http"
+          path     = "/ready"
+          interval = "10s"
           timeout  = "2s"
         }
       }

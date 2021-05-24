@@ -17,6 +17,21 @@ resource "nomad_job" "prometheus" {
   )
 }
 
+data "local_file" "grafana_dashboard" {
+  filename = "${path.module}/files/grafana_dashboard.json"
+}
+
+resource "nomad_job" "grafana" {
+  depends_on = [null_resource.nomad_readiness]
+
+  jobspec = templatefile(
+    "${path.module}/templates/grafana.nomad",
+    {
+      grafana_dashboard = data.local_file.grafana_dashboard.content,
+    }
+  )
+}
+
 resource "nomad_job" "autoscaler" {
   depends_on = [null_resource.nomad_readiness]
   jobspec = templatefile(
@@ -28,6 +43,13 @@ resource "nomad_job" "autoscaler" {
       ssh_key     = var.ssh_key,
       vpc_uuid    = var.vpc_uuid
     }
+  )
+}
+
+resource "nomad_job" "traefik" {
+  depends_on = [null_resource.nomad_readiness]
+  jobspec = file(
+    "${path.module}/templates/traefik.nomad"
   )
 }
 

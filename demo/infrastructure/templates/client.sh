@@ -1,3 +1,3 @@
 #!/bin/bash
 
-/ops/scripts/client.sh "${node_class}" "${server_tag}" "${do_token}"
+/ops/scripts/client.sh "${datacenter}" "${server_tag}" "${do_token}"

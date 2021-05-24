@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NODE_CLASS=$1
+DATACENTER=$1
 TAG_NAME=$2
 API_TOKEN=$3
 REGION=$(curl -s http://169.254.169.254/metadata/v1/region)
@@ -27,7 +27,7 @@ hashi-up nomad install \
   --version 1.1.0 \
   --local \
   --client \
-  --node-class "${NODE_CLASS}" \
+  --datacenter "${DATACENTER}" \
   --advertise "{{ GetInterfaceIP \"eth1\" }}"
 
 systemctl start consul

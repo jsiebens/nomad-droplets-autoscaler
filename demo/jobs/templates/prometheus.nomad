@@ -1,10 +1,5 @@
 job "prometheus" {
-  datacenters = ["dc1"]
-
-  constraint {
-    attribute = "${node.class}"
-    value     = "platform"
-  }
+  datacenters = ["platform"]
 
   group "prometheus" {
     network {
@@ -62,6 +57,12 @@ EOH
       service {
         name = "prometheus"
         port = "prometheus_ui"
+
+        tags = [
+          "traefik.enable=true",
+          "traefik.tcp.routers.prometheus.entrypoints=prometheus",
+          "traefik.tcp.routers.prometheus.rule=HostSNI(`*`)"
+        ]
 
         check {
           type     = "http"

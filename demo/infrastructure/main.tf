@@ -35,8 +35,8 @@ resource "digitalocean_droplet" "platform" {
   image     = var.snapshot_id
   name      = "hashi-platform-0${count.index + 1}"
   region    = var.region
-  size      = "s-1vcpu-1gb"
-  user_data = templatefile("${path.module}/templates/client.sh", { node_class = "platform", server_tag = local.server_tag, do_token = var.do_token })
+  size      = "s-1vcpu-2gb"
+  user_data = templatefile("${path.module}/templates/client.sh", { datacenter = "platform", server_tag = local.server_tag, do_token = var.do_token })
   vpc_uuid  = digitalocean_vpc.hashi.id
   ssh_keys  = [var.ssh_key]
 }
