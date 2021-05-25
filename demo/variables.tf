@@ -17,3 +17,8 @@ variable "ssh_key" {
   type        = string
   description = "Fingerprint of the SSH key. To retrieve this info, use a tool such as curl with the DigitalOcean API, to retrieve them"
 }
+
+variable "image" {
+  type    = string
+  default = ""
+}

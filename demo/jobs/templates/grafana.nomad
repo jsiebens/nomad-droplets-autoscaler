@@ -98,8 +98,8 @@ EOF
 
         tags = [
           "traefik.enable=true",
-          "traefik.tcp.routers.grafana.entrypoints=grafana",
-          "traefik.tcp.routers.grafana.rule=HostSNI(`*`)"
+          "traefik.http.routers.grafana.entrypoints=grafana",
+          "traefik.http.routers.grafana.rule=PathPrefix(`/`)"
         ]
 
         check {

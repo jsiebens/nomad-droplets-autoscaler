@@ -60,8 +60,8 @@ EOH
 
         tags = [
           "traefik.enable=true",
-          "traefik.tcp.routers.prometheus.entrypoints=prometheus",
-          "traefik.tcp.routers.prometheus.rule=HostSNI(`*`)"
+          "traefik.http.routers.prometheus.entrypoints=prometheus",
+          "traefik.http.routers.prometheus.rule=PathPrefix(`/`)"
         ]
 
         check {

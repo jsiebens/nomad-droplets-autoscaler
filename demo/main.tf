@@ -31,6 +31,7 @@ module "image" {
   source     = "./image"
   do_token   = var.do_token
   region     = var.region
+  image      = var.image
 }
 
 module "infrastructure" {

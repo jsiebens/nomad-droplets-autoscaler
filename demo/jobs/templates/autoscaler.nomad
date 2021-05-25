@@ -92,6 +92,7 @@ scaling "batch" {
       size = "s-1vcpu-1gb"
       snapshot_id = ${snapshot_id}
       user_data = "local/batch-startup.sh"
+      tags = "hashi-stack"
 
       datacenter             = "batch_workers"
       node_drain_deadline    = "1h"
