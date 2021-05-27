@@ -181,7 +181,7 @@ func (t *TargetPlugin) Status(config map[string]string) (*sdk.TargetStatus, erro
 
 func (t *TargetPlugin) createDropletTemplate(config map[string]string) (*dropletTemplate, error) {
 
-	// We cannot scale droplets without knowing the region.
+	// We cannot scale droplets without knowing the name.
 	name, ok := t.getValue(config, configKeyName)
 	if !ok {
 		return nil, fmt.Errorf("required config param %s not found", configKeyName)
