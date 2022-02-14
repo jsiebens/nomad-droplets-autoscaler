@@ -1,12 +1,12 @@
 # Nomad DigitalOcean Droplets Autoscaler
 
-The `do-droplets` target plugin allows for the scaling of the Nomad cluster clients via creating and 
+The `do-droplets` target plugin allows for the scaling of the Nomad cluster clients via creating and
 destroying [DigitalOcean Droplets](https://www.digitalocean.com/products/droplets/).
 
 ## Requirements
 
-* nomad autoscaler 0.3.0+
-* DigitalOcean account
+- nomad autoscaler 0.3.0+
+- DigitalOcean account
 
 ## Documentation
 
@@ -25,12 +25,12 @@ target "do-droplets" {
 ```
 
 - `token` `(string: "")` - a DigitalOcean API token or a path to a file containing a token. Alternatively, this can also be specified using environment variables ordered by precedence:
-    - `DIGITALOCEAN_TOKEN`
-    - `DIGITALOCEAN_ACCESS_TOKEN`
+  - `DIGITALOCEAN_TOKEN`
+  - `DIGITALOCEAN_ACCESS_TOKEN`
 
 ### Policy Configuration Options
 
-``` hcl
+```hcl
 check "hashistack-allocated-cpu" {
   # ...
   target "do-droplets" {
@@ -47,8 +47,8 @@ check "hashistack-allocated-cpu" {
   # ...
 }
 ```
+
 - `name` `(string: <required>)` - A logical name of a Droplet "group". Every managed Droplet will be tagged with this value and its name is this value with a random suffix
-  
 - `region` `(string: <required>)` - The region to start in.
 
 - `vpc_uuid` `(string: <required>)` - The ID of the VPC where the Droplet will be located.
@@ -86,3 +86,10 @@ check "hashistack-allocated-cpu" {
 - `node_selector_strategy` `(string: "least_busy")` The strategy to use when
   selecting nodes for termination. Refer to the [node selector
   strategy](https://www.nomadproject.io/docs/autoscaling/internals/node-selector-strategy) documentation for more information.
+
+- `tailscale_api_key` `(string: "")` The [tailscale api key](https://tailscale.com/kb/1101/api/) for the plugin to use. Enables deleting
+  the [tailscale
+  device](https://github.com/tailscale/tailscale/blob/main/api.md#device)
+  associated with the node when performing scale in. Alternatively, this can
+  also be specified using environment variables ordered by precedence:
+  - `TAILSCALE_API_KEY`
