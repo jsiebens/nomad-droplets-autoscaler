@@ -112,6 +112,29 @@ func (t *TargetPlugin) scaleIn(ctx context.Context, desired, diff int64, templat
 		return fmt.Errorf("failed to perform post-scale Nomad scale in tasks: %v", err)
 	}
 
+	hostnameToDeviceIdMap := make(map[string]string)
+	devices, err := t.tailscaleClient.Devices(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch tailscale devices: %w", err)
+	}
+
+	for _, device := range devices {
+		hostnameToDeviceIdMap[device.Name] = device.ID
+	}
+
+	for _, node := range ids {
+		id, _ := strconv.Atoi(node.RemoteResourceID)
+		droplet, _, err := t.client.Droplets.Get(ctx, id)
+		if err != nil {
+			return err
+		}
+
+		err = t.tailscaleClient.DeleteDevice(ctx, hostnameToDeviceIdMap[droplet.Name])
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
