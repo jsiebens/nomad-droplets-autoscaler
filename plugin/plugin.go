@@ -153,16 +153,17 @@ func (t *TargetPlugin) Scale(action sdk.ScalingAction, config map[string]string)
 
 	ctx := context.Background()
 
-	total, _, err := t.countDroplets(ctx, template)
+	droplets, err := t.getDroplets(ctx, template)
 	if err != nil {
 		return fmt.Errorf("failed to describe DigitalOcedroplets: %v", err)
 	}
 
+	total := int64(len(droplets))
 	diff, direction := t.calculateDirection(total, action.Count)
 
 	switch direction {
 	case "in":
-		err = t.scaleIn(ctx, action.Count, diff, template, config)
+		err = t.scaleIn(ctx, droplets, action.Count, diff, template, config)
 	case "out":
 		err = t.scaleOut(ctx, action.Count, diff, template, config)
 	default:
@@ -199,14 +200,14 @@ func (t *TargetPlugin) Status(config map[string]string) (*sdk.TargetStatus, erro
 
 	ctx := context.Background()
 
-	total, active, err := t.countDroplets(ctx, template)
+	droplets, err := t.getDroplets(ctx, template)
 	if err != nil {
 		return nil, fmt.Errorf("failed to describe DigitalOcedroplets: %v", err)
 	}
 
 	resp := &sdk.TargetStatus{
-		Ready: total == active,
-		Count: total,
+		Ready: true,
+		Count: int64(len(droplets)),
 		Meta:  make(map[string]string),
 	}
 
