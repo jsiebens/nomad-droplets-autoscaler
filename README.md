@@ -92,4 +92,7 @@ check "hashistack-allocated-cpu" {
   device](https://github.com/tailscale/tailscale/blob/main/api.md#device)
   associated with the node when performing scale in. Alternatively, this can
   also be specified using environment variables ordered by precedence:
+
   - `TAILSCALE_API_KEY`
+
+- `tailscale_tailnet` `(string: "")` The [tailscale tailnet](https://tailscale.com/kb/1101/api/) for the plugin to use.
